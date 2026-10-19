@@ -10,8 +10,8 @@ OpenCore 引导的 macOS EFI，来自一台雷神猎刃 R15 笔记本（出厂 W
 | 处理器 | 英特尔第十三代酷睿 i7-13650HX（14 核，Raptor Lake-HX） |
 | 主板 | THUNDEROBOT V350SNX-HL（英特尔 HM770 芯片组） |
 | 内存 | 三星 16GB DDR5 4800MHz |
-| 显卡 | NVIDIA GeForce RTX 4060 Laptop GPU 8GB（蓝天 / Clevo，已屏蔽，仅做计算输出） |
-| 核显 | 英特尔 Iris Xe / UHD（i7-13650HX 集成，macOS 下走核显加速） |
+| 显卡 | NVIDIA GeForce RTX 4060 Laptop GPU 8GB（蓝天 / Clevo）——由 NullMoth NVIDIA macOS 驱动启用，作为主显示 GPU |
+| 核显 | 英特尔 Iris Xe / UHD（i7-13650HX 集成，当前以 `-wegnoigpu` 屏蔽，显示输出走 RTX 4060） |
 | 显示器 | 京东方 BOE0B40（15.3 英寸） |
 | 磁盘 | 忆联 YMTC PC300 512GB + 梵想 Fanxiang S500Pro 2TB |
 | 声卡 | Realtek High Definition Audio（另路 NVIDIA HD Audio，已屏蔽） |
@@ -36,7 +36,21 @@ EFI
 
 1. **睡眠不可用**：当前 BIOS 下 S3 休眠/唤醒链路未打通，睡眠后无法唤醒或直接断电。
    可尝试方向：BIOS 中切换睡眠状态（Modern Standby S0ix ↔ S3）、重新启用被清理的 S3 相关 SSDT。
-2. **RTX 4060 已屏蔽**：NVIDIA 独显在 macOS 下无驱动，本 EFI 采用屏蔽方案，不抢核显输出。
+
+## NVIDIA 驱动
+
+RTX 4060 的 macOS 支持来自 NullMoth 开源驱动：<https://github.com/nullmoth/nvidia-macos-driver>
+（面向 macOS 15 Sequoia 的 Metal 驱动，支持 Turing ~ RTX 50 系，驱动文件安装进 `/Library`，不在本 EFI 内）。
+
+本 EFI 已包含该驱动所需的 OpenCore 侧配置：
+
+- `boot-args`：`nvfb=1 nvaccel=1 nvfbheads=4 -nvkmsnosmooth amfi_get_out_of_my_way=0x1 amfi=0x80 ipc_control_port_options=0`
+- `Misc > Security > SecureBootModel = Disabled`
+- `csr-active-config` 含 `0x0A43` 位（当前为全关 `0xFFF`）
+- `Kernel > Add` 含 `Lilu.kext` 与 `AMFIPass.kext`
+- 不含 `nv_disable=1` / `-wegnoegpu`（当前为 `-wegnoigpu`，屏蔽核显、保留独显输出）
+
+驱动的安装与更新见其仓库 Releases 及 1401 安装器，与本 EFI 相互独立。
 
 ## 使用注意
 
